@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AIService } from "@/services/aiService";
 
-const motivationalQuotes = [
+const fallbackQuotes = [
   "Your future is created by what you do today, not tomorrow.",
   "Success is not final, failure is not fatal: it is the courage to continue that counts.",
   "The only way to do great work is to love what you do.",
@@ -18,22 +19,49 @@ const motivationalQuotes = [
 const MotivationalQuote = () => {
   const [currentQuote, setCurrentQuote] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const getRandomQuote = () => {
-    const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
-    return motivationalQuotes[randomIndex];
+    const randomIndex = Math.floor(Math.random() * fallbackQuotes.length);
+    return fallbackQuotes[randomIndex];
   };
 
-  const refreshQuote = () => {
+  const refreshQuote = async () => {
     setIsAnimating(true);
-    setTimeout(() => {
+    setIsLoading(true);
+    
+    try {
+      const aiQuote = await AIService.generateMotivationalQuote();
+      setTimeout(() => {
+        setCurrentQuote(aiQuote);
+        setIsAnimating(false);
+        setIsLoading(false);
+      }, 300);
+    } catch (error) {
+      console.error('Failed to generate AI quote:', error);
+      setTimeout(() => {
+        setCurrentQuote(getRandomQuote());
+        setIsAnimating(false);
+        setIsLoading(false);
+      }, 300);
+    }
+  };
+
+  const generateInitialQuote = async () => {
+    try {
+      setIsLoading(true);
+      const aiQuote = await AIService.generateMotivationalQuote();
+      setCurrentQuote(aiQuote);
+    } catch (error) {
+      console.error('Failed to generate initial AI quote:', error);
       setCurrentQuote(getRandomQuote());
-      setIsAnimating(false);
-    }, 300);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    setCurrentQuote(getRandomQuote());
+    generateInitialQuote();
   }, []);
 
   return (
@@ -58,9 +86,10 @@ const MotivationalQuote = () => {
             variant="glass"
             size="icon"
             onClick={refreshQuote}
+            disabled={isLoading}
             className="ml-4 w-8 h-8"
           >
-            <RefreshCw className={`w-4 h-4 ${isAnimating ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isAnimating || isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
         

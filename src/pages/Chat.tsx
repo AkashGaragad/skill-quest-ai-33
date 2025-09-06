@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { Send, Bot, User, Lightbulb, TrendingUp, MapPin, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AIService } from "@/services/aiService";
+import type { ChatMessage } from "@/types";
 
 const Chat = () => {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: 1,
-      type: "bot",
+      id: "1",
       content: "Hi! I'm your AI Career Mentor. I'm here to help you make informed career choices and develop the right skills. What would you like to explore today?",
+      sender: "ai",
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const suggestions = [
     {
@@ -36,29 +39,44 @@ const Chat = () => {
     }
   ];
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
-    const newMessage = {
-      id: messages.length + 1,
-      type: "user",
+    const userMessage: ChatMessage = {
+      id: `user_${Date.now()}`,
       content: inputValue,
+      sender: "user",
       timestamp: new Date()
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, userMessage]);
+    const messageToSend = inputValue;
     setInputValue("");
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = {
-        id: messages.length + 2,
-        type: "bot",
-        content: "That's a great question! Based on your interests, I'd recommend focusing on these key areas. Let me create a personalized roadmap for you...",
+    try {
+      const aiResponse = await AIService.getChatResponse(messageToSend, messages);
+      
+      const aiMessage: ChatMessage = {
+        id: `ai_${Date.now()}`,
+        content: aiResponse,
+        sender: "ai",
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1500);
+      
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+      const errorMessage: ChatMessage = {
+        id: `ai_error_${Date.now()}`,
+        content: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
+        sender: "ai",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -133,9 +151,9 @@ const Chat = () => {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex gap-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {message.type === 'bot' && (
+                  {message.sender === 'ai' && (
                     <div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center flex-shrink-0">
                       <Bot className="w-5 h-5 text-white" />
                     </div>
@@ -143,7 +161,7 @@ const Chat = () => {
                   
                   <div
                     className={`max-w-xl p-4 rounded-2xl ${
-                      message.type === 'user'
+                      message.sender === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted/50 text-foreground'
                     }`}
@@ -154,13 +172,29 @@ const Chat = () => {
                     </div>
                   </div>
 
-                  {message.type === 'user' && (
+                  {message.sender === 'user' && (
                     <div className="w-8 h-8 bg-gradient-accent rounded-lg flex items-center justify-center flex-shrink-0">
                       <User className="w-5 h-5 text-white" />
                     </div>
                   )}
                 </div>
               ))}
+              
+              {isLoading && (
+                <div className="flex gap-4 justify-start">
+                  <div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="max-w-xl p-4 rounded-2xl bg-muted/50 text-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                      <span className="text-sm text-muted-foreground ml-2">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Input area */}
@@ -179,7 +213,7 @@ const Chat = () => {
                   variant="hero"
                   size="icon"
                   className="w-12 h-12"
-                  disabled={!inputValue.trim()}
+                  disabled={!inputValue.trim() || isLoading}
                 >
                   <Send className="w-5 h-5" />
                 </Button>
