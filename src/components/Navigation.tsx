@@ -1,19 +1,44 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, MessageCircle, Map, CheckSquare, Users, User, Menu, X } from "lucide-react";
+import { Home, MessageCircle, Map, CheckSquare, Users, User, Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out",
+      });
+    }
+  };
 
   const navItems = [
-    { icon: Home, label: "Home", path: "/" },
-    { icon: MessageCircle, label: "AI Mentor", path: "/chat" },
-    { icon: Map, label: "Roadmaps", path: "/roadmaps" },
-    { icon: CheckSquare, label: "TODO", path: "/todo" },
-    { icon: Users, label: "Community", path: "/community" },
-    { icon: User, label: "Profile", path: "/profile" },
+    { icon: Home, label: "Home", path: "/", requiresAuth: true },
+    { icon: MessageCircle, label: "AI Mentor", path: "/chat", requiresAuth: false },
+    { icon: Map, label: "Roadmaps", path: "/roadmaps", requiresAuth: true },
+    { icon: CheckSquare, label: "TODO", path: "/todo", requiresAuth: true },
+    { icon: Users, label: "Community", path: "/community", requiresAuth: false },
+    { icon: User, label: "Profile", path: "/profile", requiresAuth: true },
   ];
+
+  // Filter nav items based on auth status
+  const availableNavItems = navItems.filter(item => 
+    !item.requiresAuth || user
+  );
 
   return (
     <nav className="bg-gradient-card border-b border-border shadow-soft sticky top-0 z-50 backdrop-blur-sm">
@@ -32,8 +57,8 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navItems.map(({ icon: Icon, label, path }) => (
+          <div className="hidden md:flex items-center space-x-4">
+            {availableNavItems.map(({ icon: Icon, label, path }) => (
               <NavLink
                 key={path}
                 to={path}
@@ -49,6 +74,25 @@ const Navigation = () => {
                 <span>{label}</span>
               </NavLink>
             ))}
+            
+            {/* Desktop Auth Actions */}
+            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-border">
+              {user ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    {user.email?.split('@')[0]}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button asChild variant="outline" size="sm">
+                  <NavLink to="/auth">Sign In</NavLink>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -68,7 +112,7 @@ const Navigation = () => {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="space-y-2">
-              {navItems.map(({ icon: Icon, label, path }) => (
+              {availableNavItems.map(({ icon: Icon, label, path }) => (
                 <NavLink
                   key={path}
                   to={path}
@@ -85,6 +129,35 @@ const Navigation = () => {
                   <span>{label}</span>
                 </NavLink>
               ))}
+              
+              {/* Mobile Auth Actions */}
+              <div className="pt-2 mt-2 border-t border-border">
+                {user ? (
+                  <div className="space-y-2">
+                    <div className="px-4 py-2 text-sm text-muted-foreground">
+                      Signed in as {user.email?.split('@')[0]}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mx-4 max-w-[calc(100%-2rem)] justify-start" 
+                      onClick={() => {
+                        handleSignOut();
+                        setIsOpen(false);
+                      }}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </Button>
+                  </div>
+                ) : (
+                  <Button asChild variant="outline" size="sm" className="w-full mx-4 max-w-[calc(100%-2rem)]">
+                    <NavLink to="/auth" onClick={() => setIsOpen(false)}>
+                      Sign In
+                    </NavLink>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
