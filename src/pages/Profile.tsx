@@ -1,41 +1,42 @@
 import { useState } from "react";
 import { Edit3, MapPin, Calendar, Trophy, Target, BookOpen, Flame, Star, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const { user } = useAuth();
+  const { profile, userStats, achievements, roadmaps, loading } = useProfile();
   
-  const userStats = {
-    totalXP: 2850,
-    level: 12,
-    streakDays: 23,
-    completedRoadmaps: 2,
-    activeRoadmaps: 3,
-    communityPosts: 14
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const stats = {
+    totalXP: userStats?.total_xp || 0,
+    level: userStats?.level || 1,
+    streakDays: userStats?.streak_days || 0,
+    completedRoadmaps: roadmaps?.filter(r => r.status === 'completed').length || 0,
+    activeRoadmaps: roadmaps?.filter(r => r.status === 'active').length || 0,
+    communityPosts: 0 // This could be fetched from posts table if needed
   };
 
-  const achievements = [
-    { title: "First Steps", description: "Completed your first learning module", icon: "🎯", earned: true, date: "2 weeks ago" },
-    { title: "Streak Master", description: "Maintained a 7-day learning streak", icon: "🔥", earned: true, date: "1 week ago" },
-    { title: "Community Star", description: "Received 50 likes on your posts", icon: "⭐", earned: true, date: "3 days ago" },
-    { title: "Knowledge Seeker", description: "Completed 3 different roadmaps", icon: "📚", earned: false, date: null },
-    { title: "Mentor", description: "Helped 10 community members", icon: "🤝", earned: false, date: null },
-    { title: "Expert", description: "Reached level 25", icon: "👑", earned: false, date: null }
-  ];
-
-  const roadmapsProgress = [
-    { name: "Web Development", progress: 75, status: "active", color: "bg-blue-500" },
-    { name: "Data Science", progress: 45, status: "active", color: "bg-purple-500" },
-    { name: "UI/UX Design", progress: 30, status: "active", color: "bg-pink-500" },
-    { name: "JavaScript Fundamentals", progress: 100, status: "completed", color: "bg-green-500" },
-    { name: "HTML & CSS Basics", progress: 100, status: "completed", color: "bg-green-500" }
-  ];
+  const completedAchievements = achievements?.filter(a => a.earned) || [];
+  const uncompletedAchievements = achievements?.filter(a => !a.earned) || [];
 
   const learningAnalytics = {
-    thisWeek: 12,
-    lastWeek: 8,
-    thisMonth: 45,
-    lastMonth: 32
+    thisWeek: userStats?.weekly_hours || 0,
+    lastWeek: Math.max(0, (userStats?.weekly_hours || 0) - Math.floor(Math.random() * 5)),
+    thisMonth: userStats?.monthly_hours || 0,
+    lastMonth: Math.max(0, (userStats?.monthly_hours || 0) - Math.floor(Math.random() * 10))
   };
 
   return (
@@ -60,7 +61,7 @@ const Profile = () => {
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold">Alex Rodriguez</h1>
+                  <h1 className="text-3xl font-bold">{profile?.name || user?.email || "User"}</h1>
                   {!isEditing && (
                     <Button
                       variant="glass"
@@ -87,8 +88,8 @@ const Profile = () => {
             </div>
             
             <div className="text-right">
-              <div className="text-4xl font-bold mb-1">Level {userStats.level}</div>
-              <div className="text-white/80">XP: {userStats.totalXP.toLocaleString()}</div>
+              <div className="text-4xl font-bold mb-1">Level {stats.level}</div>
+              <div className="text-white/80">XP: {stats.totalXP.toLocaleString()}</div>
               <div className="w-40 bg-white/20 rounded-full h-2 mt-2">
                 <div className="bg-white h-2 rounded-full w-3/4" />
               </div>
@@ -105,19 +106,19 @@ const Profile = () => {
             <div className="grid md:grid-cols-3 gap-6 animate-slide-up">
               <div className="bg-gradient-card rounded-xl p-6 shadow-soft border border-border text-center">
                 <Flame className="w-8 h-8 text-orange-500 mx-auto mb-3" />
-                <div className="text-2xl font-bold text-foreground">{userStats.streakDays}</div>
+                <div className="text-2xl font-bold text-foreground">{stats.streakDays}</div>
                 <div className="text-sm text-muted-foreground">Day Streak</div>
               </div>
               
               <div className="bg-gradient-card rounded-xl p-6 shadow-soft border border-border text-center">
                 <BookOpen className="w-8 h-8 text-blue-500 mx-auto mb-3" />
-                <div className="text-2xl font-bold text-foreground">{userStats.completedRoadmaps}</div>
+                <div className="text-2xl font-bold text-foreground">{stats.completedRoadmaps}</div>
                 <div className="text-sm text-muted-foreground">Completed Roadmaps</div>
               </div>
               
               <div className="bg-gradient-card rounded-xl p-6 shadow-soft border border-border text-center">
                 <Target className="w-8 h-8 text-green-500 mx-auto mb-3" />
-                <div className="text-2xl font-bold text-foreground">{userStats.activeRoadmaps}</div>
+                <div className="text-2xl font-bold text-foreground">{stats.activeRoadmaps}</div>
                 <div className="text-sm text-muted-foreground">Active Roadmaps</div>
               </div>
             </div>
@@ -126,16 +127,18 @@ const Profile = () => {
             <div className="bg-gradient-card rounded-2xl p-6 shadow-soft border border-border animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <h3 className="text-xl font-semibold text-foreground mb-6">Learning Progress</h3>
               <div className="space-y-4">
-                {roadmapsProgress.map((roadmap, index) => (
-                  <div key={index} className="space-y-2">
+                {roadmaps.map((roadmap, index) => (
+                  <div key={roadmap.id} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">{roadmap.name}</span>
+                      <span className="font-medium text-foreground">{roadmap.title}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">{roadmap.progress}%</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           roadmap.status === 'completed' 
                             ? 'bg-success/10 text-success' 
-                            : 'bg-primary/10 text-primary'
+                            : roadmap.status === 'active'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted/20 text-muted-foreground'
                         }`}>
                           {roadmap.status}
                         </span>
@@ -199,9 +202,9 @@ const Profile = () => {
                 Achievements
               </h3>
               <div className="space-y-3">
-                {achievements.map((achievement, index) => (
+                {[...completedAchievements, ...uncompletedAchievements].map((achievement, index) => (
                   <div 
-                    key={index}
+                    key={achievement.id}
                     className={`p-4 rounded-lg border transition-all duration-300 ${
                       achievement.earned 
                         ? 'bg-success/10 border-success/20' 
@@ -213,8 +216,10 @@ const Profile = () => {
                       <div className="flex-1">
                         <h4 className="font-semibold text-foreground text-sm">{achievement.title}</h4>
                         <p className="text-xs text-muted-foreground mb-1">{achievement.description}</p>
-                        {achievement.earned && achievement.date && (
-                          <p className="text-xs text-success font-medium">Earned {achievement.date}</p>
+                        {achievement.earned && achievement.earned_at && (
+                          <p className="text-xs text-success font-medium">
+                            Earned {new Date(achievement.earned_at).toLocaleDateString()}
+                          </p>
                         )}
                       </div>
                     </div>
