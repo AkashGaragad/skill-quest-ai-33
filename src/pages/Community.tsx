@@ -1,57 +1,76 @@
-import { Heart, MessageCircle, Share, TrendingUp, Award, Users } from "lucide-react";
+import { useState } from 'react';
+import { Heart, MessageCircle, Share, TrendingUp, Award, Users, User, Hash, Camera, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { useSocialFeatures } from "@/hooks/useSocialFeatures";
+import { ImageUpload } from "@/components/ImageUpload";
+import { PostComments } from "@/components/PostComments";
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 const Community = () => {
-  const posts = [
-    {
-      id: 1,
-      author: "Sarah Chen",
-      avatar: "SC",
-      skill: "React",
-      time: "2 hours ago",
-      content: "Just completed my first React project! Built a weather app with hooks and context API. The learning curve was steep but so rewarding. Special thanks to the community for all the help! 🚀",
-      image: null,
-      likes: 24,
-      comments: 8,
-      tags: ["React", "JavaScript", "FirstProject"]
-    },
-    {
-      id: 2,
-      author: "Marcus Johnson",
-      avatar: "MJ",
-      skill: "Data Science",
-      time: "4 hours ago",
-      content: "Week 3 of my Data Science journey complete! Diving deep into pandas and NumPy. Created my first data visualization dashboard. The amount of insights you can extract from raw data is mind-blowing! 📊",
-      image: null,
-      likes: 31,
-      comments: 12,
-      tags: ["DataScience", "Python", "Visualization"]
-    },
-    {
-      id: 3,
-      author: "Alex Rodriguez",
-      avatar: "AR",
-      skill: "AI/ML",
-      time: "1 day ago",
-      content: "Milestone achieved! 🎉 Just deployed my first machine learning model to production. It predicts customer churn with 85% accuracy. The journey from data preprocessing to deployment taught me so much about the ML pipeline.",
-      image: null,
-      likes: 67,
-      comments: 23,
-      tags: ["MachineLearning", "AI", "Deployment"]
-    },
-    {
-      id: 4,
-      author: "Emily Watson",
-      avatar: "EW",
-      skill: "UX Design",
-      time: "2 days ago",
-      content: "Completed my UX research project! Conducted 15 user interviews and created personas for a mobile banking app. User research is so eye-opening - what we think users want vs what they actually need can be very different! 🔍",
-      image: null,
-      likes: 19,
-      comments: 6,
-      tags: ["UXDesign", "UserResearch", "Mobile"]
+  const { user } = useAuth();
+  const { posts, loading, createPost, toggleLike } = useSocialFeatures();
+  const [newPostContent, setNewPostContent] = useState('');
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
+  const [isPosting, setIsPosting] = useState(false);
+
+  const extractHashtags = (text: string) => {
+    const hashtagRegex = /#[\w]+/g;
+    return text.match(hashtagRegex) || [];
+  };
+
+  const renderContentWithHashtags = (content: string) => {
+    const parts = content.split(/(#[\w]+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('#')) {
+        return (
+          <span key={index} className="text-primary font-medium hover:underline cursor-pointer">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim() || !user) {
+      toast({
+        title: "Error",
+        description: "Please write something to post",
+        variant: "destructive"
+      });
+      return;
     }
-  ];
+
+    setIsPosting(true);
+    try {
+      const hashtags = extractHashtags(newPostContent);
+      await createPost(newPostContent, uploadedImageUrl || undefined, hashtags);
+      setNewPostContent('');
+      setUploadedImageUrl('');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleShare = (post: any) => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Post by ${post.profiles?.name}`,
+        text: post.content,
+        url: window.location.href
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link copied!",
+        description: "Post link has been copied to clipboard"
+      });
+    }
+  };
 
   const communityStats = [
     { label: "Active Learners", value: "15.2k", icon: Users },
@@ -103,77 +122,163 @@ const Community = () => {
             {/* Create Post */}
             <div className="bg-gradient-card rounded-2xl p-6 shadow-soft border border-border animate-slide-up">
               <h3 className="text-lg font-semibold text-foreground mb-4">Share Your Progress</h3>
-              <div className="space-y-4">
-                <textarea
-                  placeholder="What did you learn this week? Share your wins, challenges, or insights..."
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                  rows={3}
-                />
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Add Photo</Button>
-                    <Button variant="outline" size="sm">Tag Skills</Button>
+              {user ? (
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center text-white font-semibold">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <Textarea
+                        placeholder="What did you learn this week? Share your wins, challenges, or insights... Use #hashtags to categorize your post!"
+                        value={newPostContent}
+                        onChange={(e) => setNewPostContent(e.target.value)}
+                        className="min-h-[100px] resize-none"
+                      />
+                    </div>
                   </div>
-                  <Button variant="hero">Share Post</Button>
+                  
+                  <ImageUpload
+                    onImageUploaded={setUploadedImageUrl}
+                    onImageRemoved={() => setUploadedImageUrl('')}
+                    uploadedImageUrl={uploadedImageUrl}
+                  />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Hash className="w-4 h-4" />
+                        Use #hashtags
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Camera className="w-4 h-4" />
+                        Add photos
+                      </span>
+                    </div>
+                    <Button 
+                      onClick={handleCreatePost}
+                      disabled={!newPostContent.trim() || isPosting}
+                      className="flex items-center gap-2"
+                    >
+                      {isPosting ? (
+                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      {isPosting ? 'Posting...' : 'Share Post'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">
+                    Please log in to share your progress with the community
+                  </p>
+                  <Button variant="outline" onClick={() => window.location.href = '/auth'}>
+                    Log In
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Posts Feed */}
             <div className="space-y-6">
-              {posts.map((post, index) => (
-                <div 
-                  key={post.id} 
-                  className="bg-gradient-card rounded-2xl p-6 shadow-soft border border-border hover:shadow-medium transition-all duration-300 animate-slide-up"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  {/* Post Header */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 bg-gradient-hero rounded-xl flex items-center justify-center text-white font-semibold">
-                      {post.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-foreground">{post.author}</h4>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getSkillColor(post.skill)}`}>
-                          {post.skill}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{post.time}</p>
-                    </div>
-                  </div>
-
-                  {/* Post Content */}
-                  <p className="text-foreground leading-relaxed mb-4">{post.content}</p>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {post.tags.map(tag => (
-                      <span key={tag} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Post Actions */}
-                  <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <div className="flex items-center gap-6">
-                      <button className="flex items-center gap-2 text-muted-foreground hover:text-destructive transition-colors">
-                        <Heart className="w-5 h-5" />
-                        <span className="text-sm font-medium">{post.likes}</span>
-                      </button>
-                      <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
-                        <MessageCircle className="w-5 h-5" />
-                        <span className="text-sm font-medium">{post.comments}</span>
-                      </button>
-                      <button className="flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors">
-                        <Share className="w-5 h-5" />
-                        <span className="text-sm font-medium">Share</span>
-                      </button>
-                    </div>
-                  </div>
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 </div>
-              ))}
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No posts yet</h3>
+                  <p className="text-muted-foreground">
+                    Be the first to share your learning journey!
+                  </p>
+                </div>
+              ) : (
+                posts.map((post, index) => (
+                  <div 
+                    key={post.id} 
+                    className="bg-gradient-card rounded-2xl p-6 shadow-soft border border-border hover:shadow-medium transition-all duration-300 animate-slide-up"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    {/* Post Header */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-hero rounded-xl flex items-center justify-center text-white font-semibold">
+                        <User className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-foreground">
+                            {post.profiles?.name || 'Anonymous User'}
+                          </h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Post Content */}
+                    <div className="text-foreground leading-relaxed mb-4">
+                      {renderContentWithHashtags(post.content)}
+                    </div>
+
+                    {/* Post Image */}
+                    {post.image_url && (
+                      <div className="mb-4">
+                        <img
+                          src={post.image_url}
+                          alt="Post attachment"
+                          className="max-w-full h-auto rounded-lg border border-border"
+                        />
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {post.tags.map((tag, tagIndex) => (
+                          <span key={tagIndex} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium cursor-pointer hover:bg-primary/20 transition-colors">
+                            {tag.startsWith('#') ? tag : `#${tag}`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Post Actions */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <div className="flex items-center gap-6">
+                          <button 
+                            onClick={() => toggleLike(post.id)}
+                            className={`flex items-center gap-2 transition-colors ${
+                              post.user_liked 
+                                ? 'text-destructive' 
+                                : 'text-muted-foreground hover:text-destructive'
+                            }`}
+                            disabled={!user}
+                          >
+                            <Heart className={`w-5 h-5 ${post.user_liked ? 'fill-current' : ''}`} />
+                            <span className="text-sm font-medium">{post.likes_count}</span>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleShare(post)}
+                            className="flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors"
+                          >
+                            <Share className="w-5 h-5" />
+                            <span className="text-sm font-medium">Share</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Comments */}
+                      <PostComments postId={post.id} commentsCount={post.comments_count} />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
