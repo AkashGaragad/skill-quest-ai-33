@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Code, Database, Brain, Shield, Smartphone, Palette, TrendingUp, Clock, Star, CheckCircle, Circle } from "lucide-react";
+import { 
+  Code, Database, Brain, Shield, Smartphone, Palette, 
+  TrendingUp, Clock, Star, CheckCircle, Circle, Search 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Roadmaps = () => {
   const [selectedRoadmap, setSelectedRoadmap] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const roadmaps = [
     {
@@ -107,19 +111,30 @@ const Roadmaps = () => {
     }
   };
 
+  // Search filter
+  const filteredRoadmaps = roadmaps.filter((roadmap) =>
+    roadmap.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Learning <span className="bg-gradient-hero bg-clip-text text-transparent">Roadmaps</span>
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Structured learning paths designed by industry experts to take you from beginner to professional
-          </p>
-        </div>
+        {/* Search Bar */}
+        {!selectedRoadmap && (
+          <div className="mb-8 flex items-center gap-3">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search roadmaps..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+            </div>
+          </div>
+        )}
 
         {selectedRoadmap ? (
           // Detailed Roadmap View
@@ -170,13 +185,21 @@ const Roadmaps = () => {
                         <div className="text-sm text-muted-foreground mb-3">
                           {topic.resources} learning resources
                         </div>
-                        <Button 
-                          variant={topic.completed ? "success" : "default"} 
-                          size="sm" 
-                          className="w-full"
-                        >
-                          {topic.completed ? "Review" : "Start Learning"}
-                        </Button>
+                        {topic.completed ? (
+                          <Button 
+                            variant="success"
+                            size="sm" 
+                            className="w-full flex items-center gap-2"
+                            disabled
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Completed
+                          </Button>
+                        ) : (
+                          <Button variant="default" size="sm" className="w-full">
+                            Start Learning
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -187,7 +210,7 @@ const Roadmaps = () => {
         ) : (
           // Roadmaps Grid
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-slide-up">
-            {roadmaps.map((roadmap) => (
+            {filteredRoadmaps.map((roadmap) => (
               <div 
                 key={roadmap.id}
                 className="bg-gradient-card rounded-2xl p-6 shadow-soft border border-border hover:shadow-strong transition-all duration-300 hover:scale-105 cursor-pointer group"

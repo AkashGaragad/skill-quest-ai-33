@@ -2,19 +2,14 @@ import MotivationalQuote from "@/components/MotivationalQuote";
 import QuickActionDashboard from "@/components/QuickActionDashboard";
 import StreakTracker from "@/components/StreakTracker";
 import heroImage from "@/assets/hero-image.jpg";
+import { Link } from "react-router-dom";
 
 const Home = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative bg-gradient-hero overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <img 
-            src={heroImage} 
-            alt="Career guidance and skill development" 
-            className="w-full h-full object-cover"
-          />
-        </div>
+       
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left space-y-6 animate-fade-in">
@@ -29,12 +24,11 @@ const Home = () => {
                 of ambitious youth building their future together.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link to="/Roadmaps" className="group">
                 <button className="bg-white text-primary px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/90 transition-all duration-300 hover:scale-105 shadow-medium">
                   Start Your Journey
                 </button>
-                <button className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-300">
-                  Watch Demo
-                </button>
+                </Link>
               </div>
             </div>
             <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>

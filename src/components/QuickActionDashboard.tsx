@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
 import { MessageCircle, Map, Flame, TrendingUp, Target, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
+
+
 
 const QuickActionDashboard = () => {
+  const { user } = useAuth();
+  const { profile } = useProfile();
   const quickActions = [
     {
       title: "Chat with AI Mentor",
@@ -42,7 +48,7 @@ const QuickActionDashboard = () => {
       {/* Personalized Greeting */}
       <div className="text-center space-y-2 animate-fade-in">
         <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-          Welcome back, <span className="bg-gradient-hero bg-clip-text text-transparent">Alex</span>! 
+          Welcome back, <span className="bg-gradient-hero bg-clip-text text-transparent">{profile?.name || user?.email || "User"}</span>! 
         </h2>
         <p className="text-lg text-muted-foreground">
           Keep going strong on your <span className="font-semibold text-primary">Web Development</span> journey 🚀

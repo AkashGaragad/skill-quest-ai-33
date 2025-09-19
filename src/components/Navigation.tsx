@@ -79,9 +79,7 @@ const Navigation = () => {
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-border">
               {user ? (
                 <>
-                  <span className="text-sm text-muted-foreground">
-                    {user.email?.split('@')[0]}
-                  </span>
+                 
                   <Button variant="outline" size="sm" onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-1" />
                     Sign Out
